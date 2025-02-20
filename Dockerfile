@@ -1,24 +1,36 @@
-#Base image for building
-FROM node:20-alpine As builder
+# Base image for building
+FROM node:20-alpine AS builder
+
 # Set up the working directory
 WORKDIR /app
-# Copy package.json and package-lock.json
+
+# Copy package.json and package-lock.json first (to leverage Docker's caching)
 COPY package*.json ./
-#Install dependencies
+
+# Install dependencies
 RUN npm install
-#Copy the rest of the application file from the repository                                            COPY . .
-#Convert the development files to static serving files
+
+# Copy the entire project (including index.html, src, public, etc.)
+COPY . .
+
+# Build the application
 RUN npm run build
 
-#Production Image
-FROM node:20-alpine As runner
-#Set up the working directory
+# Production Image
+FROM node:20-alpine AS runner
+
+# Set up the working directory
 WORKDIR /app
-#Copy the builder files from builder image
+
+# Copy the built files from the builder stage
 COPY --from=builder /app/dist ./dist
-#Install a lightweight server to serve the static files previously created
+
+# Install a lightweight server to serve the static files
 RUN npm install -g serve
-#Expose the port
+
+# Expose the port
 EXPOSE 3000
-#Start the application using serve
-CMD ["serve", "-s", "dist", "-1", "3000"] 
+
+# Start the application using serve
+CMD ["serve", "-s", "dist", "-l", "3000"]
+ 
